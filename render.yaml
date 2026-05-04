@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sentiment-analysis
+    env: python
+    rootDir: p-d
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn Source.app:app

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ texts.page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="page">
+        <div class="container">
+            <div class="header">
+                <div class="language-switcher">
+                    <span data-i18n="language_label">{{ texts.language_label }}</span>
+                    <button type="button" class="lang-btn {% if language == 'sq' %}active{% endif %}" data-language="sq">{{ texts.language_names.sq }}</button>
+                    <button type="button" class="lang-btn {% if language == 'en' %}active{% endif %}" data-language="en">{{ texts.language_names.en }}</button>
+                </div>
+                <h1 data-i18n="header_title">{{ texts.header_title }}</h1>
+                <h2 data-i18n="header_subtitle">{{ texts.header_subtitle }}</h2>
+                <p data-i18n="header_description">{{ texts.header_description }}</p>
+            </div>
+
+            <div class="card">
+                <form method="POST">
+                    <input type="hidden" name="language" value="{{ language }}" id="language-input">
+                    <label for="comment" data-i18n="textarea_label">{{ texts.textarea_label }}</label>
+                    <textarea name="comment" id="comment" rows="6" placeholder="{{ texts.textarea_placeholder }}">{{ user_text }}</textarea>
+                    <button type="submit" data-i18n="submit_button">{{ texts.submit_button }}</button>
+                </form>
+
+                {% if result %}
+                <div class="result-box {% if result == 'Pozitiv' or result == 'Positive' %}positive{% elif result == 'Negativ' or result == 'Negative' %}negative{% else %}neutral{% endif %}">
+                    <h3 data-i18n="result_title">{{ texts.result_title }}</h3>
+                    <p><span data-i18n="result_text">{{ texts.result_text }}</span> <strong id="result-label" data-result-key="{{ result_key }}">{{ result }}</strong></p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="stats-section">
+                {% for section in stats_sections %}
+                <div class="stats-card" data-section-key="{{ section['key'] }}">
+                    <h3 class="stats-title">{{ section["title"] }}</h3>
+                    <p class="stats-total"><span data-i18n="stats_total_label">{{ texts.stats_total_label }}</span>: <strong>{{ section["total"] }}</strong></p>
+                    {% for item in section["items"] %}
+                    <div class="stat-row" data-label-key="{{ item.label_key }}">
+                        <div class="stat-head">
+                            <span class="stat-label">{{ item.label }}</span>
+                            <span class="stat-count" data-count="{{ item.count }}" data-percent="{{ item.percent }}">{{ item.count }} {{ texts.stats_count_suffix }} | {{ item.percent }}%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill {{ item.css }}" style="width: {{ item.percent }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if section["note"] %}
+                    <p class="stats-note">{{ section["note"] }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="info-section">
+                <div class="info-box">
+                    <h3 data-i18n="info_goal_title">{{ texts.info_goal_title }}</h3>
+                    <p data-i18n="info_goal_text">{{ texts.info_goal_text }}</p>
+                </div>
+
+                <div class="info-box">
+                    <h3 data-i18n="info_tech_title">{{ texts.info_tech_title }}</h3>
+                    <p data-i18n="info_tech_text">{{ texts.info_tech_text }}</p>
+                </div>
+
+                <div class="info-box">
+                    <h3 data-i18n="info_features_title">{{ texts.info_features_title }}</h3>
+                    <p data-i18n="info_features_text">{{ texts.info_features_text }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const translations = {{ translations | tojson }};
+        const pageTitle = document.querySelector("title");
+        const languageInput = document.getElementById("language-input");
+        const commentField = document.getElementById("comment");
+        const resultLabel = document.getElementById("result-label");
+
+        function applyLanguage(language) {
+            const text = translations[language] || translations.sq;
+
+            document.documentElement.lang = language;
+            pageTitle.textContent = text.page_title;
+            if (languageInput) {
+                languageInput.value = language;
+            }
+            if (commentField) {
+                commentField.placeholder = text.textarea_placeholder;
+            }
+
+            document.querySelectorAll("[data-i18n]").forEach((node) => {
+                const key = node.dataset.i18n;
+                if (text[key]) {
+                    node.textContent = text[key];
+                }
+            });
+
+            document.querySelectorAll("[data-section-key]").forEach((section) => {
+                const title = section.querySelector(".stats-title");
+                if (!title) {
+                    return;
+                }
+
+                title.textContent = section.dataset.sectionKey === "sq" ? text.stats_title_sq : text.stats_title_en;
+
+                const note = section.querySelector(".stats-note");
+                if (note && section.dataset.sectionKey === "en") {
+                    note.textContent = text.stats_note_en;
+                }
+            });
+
+            document.querySelectorAll(".stat-row").forEach((row) => {
+                const label = row.querySelector(".stat-label");
+                const count = row.querySelector(".stat-count");
+                const labelKey = row.dataset.labelKey;
+                if (label && text.stat_labels[labelKey]) {
+                    label.textContent = text.stat_labels[labelKey];
+                }
+                if (count) {
+                    count.textContent = `${count.dataset.count} ${text.stats_count_suffix} | ${count.dataset.percent}%`;
+                }
+            });
+
+            if (resultLabel) {
+                const resultKey = Number(resultLabel.dataset.resultKey);
+                if (Object.prototype.hasOwnProperty.call(text.labels, resultKey)) {
+                    resultLabel.textContent = text.labels[resultKey];
+                }
+            }
+
+            document.querySelectorAll(".lang-btn").forEach((button) => {
+                button.classList.toggle("active", button.dataset.language === language);
+            });
+
+            window.localStorage.setItem("preferredLanguage", language);
+        }
+
+        const initialLanguage = "{{ language }}";
+        applyLanguage(initialLanguage in translations ? initialLanguage : "sq");
+
+        document.querySelectorAll(".lang-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+                window.localStorage.setItem("preferredLanguage", button.dataset.language);
+                window.location.href = `/?lang=${button.dataset.language}`;
+            });
+        });
+    </script>
+</body>
+</html>
