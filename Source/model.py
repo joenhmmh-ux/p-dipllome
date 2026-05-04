@@ -27,6 +27,7 @@ DATASETS = [
         "text_column": "sentence",
         "label_column": "sentiment",
         "language": "en",
+        "auto_neutral": True,
     },
 ]
 MAX_SAMPLES_PER_LABEL = {
@@ -54,6 +55,10 @@ for dataset in DATASETS:
     df["sentiment_raw"] = df[dataset["label_column"]].astype(str).str.strip()
     df = df[df["sentiment_raw"].isin(LABEL_MAP)]
     df["label"] = df["sentiment_raw"].map(LABEL_MAP)
+    if dataset.get("auto_neutral"):
+        neutral_mask = df["label"].isin([0, 1])
+        neutral_sample = df[neutral_mask].sample(frac=0.15, random_state=42)
+        df.loc[neutral_sample.index, "label"] = 2
     df["language"] = dataset["language"]
 
     max_samples = MAX_SAMPLES_PER_LABEL.get(dataset["language"])
